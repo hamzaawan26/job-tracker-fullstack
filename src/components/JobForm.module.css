@@ -4,6 +4,7 @@
   border-radius: 10px;
   margin-bottom: 2rem;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  min-width: 0;
 }
 
 .form h2 {
@@ -21,6 +22,13 @@
   border-radius: 6px;
   border: 1px solid #ccc;
   font-size: 0.95rem;
+  font-family: inherit;
+}
+
+@media (max-width: 480px) {
+  .form {
+    padding: 1.25rem;
+  }
 }
 
 .form textarea {

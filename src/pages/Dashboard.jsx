@@ -38,29 +38,43 @@ function Dashboard() {
   }
   console.log('Jobs query raw data:', data)
 
-  return (
-    <div className={styles.layout}>
-      <Sidebar onAddJob={() => setShowForm(true)} />
+  
+return (
+  <div className={styles.layout}>
+    <Sidebar onAddJob={() => setShowForm(true)} />
 
-      <main className={styles.content}>
+    <main className={styles.content}>
+
+      {/* 1. Dashboard Section */}
+      <section id="dashboard">
         <DashboardHeader user={user} jobs={jobs} />
+      </section>
 
-        <div className={styles.controls}>
-          <input
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option>All</option>
-            <option>Applied</option>
-            <option>Interview</option>
-            <option>Offer</option>
-          </select>
-        </div>
+      {/* Search and Filter */}
+      <div className={styles.controls}>
+        <input
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        >
+          <option>All</option>
+          <option>Applied</option>
+          <option>Interview</option>
+          <option>Offer</option>
+        </select>
+      </div>
+
+      {/* 2. Applications Section */}
+      <section id="applications">
         {isLoading ? (
-          <div className={styles.loading}>Loading jobs...</div>
+          <div className={styles.loading}>
+            Loading jobs...
+          </div>
         ) : (
           <div className={styles.grid}>
             {jobs.map((job) => (
@@ -73,26 +87,33 @@ function Dashboard() {
             ))}
           </div>
         )}
+      </section>
 
+      {/* 3. Skills Section */}
+      <section id="skills">
         <SkillsPanel />
-      </main>
+      </section>
 
-      {(showForm || editingJob) && (
-        <Modal
-          onClose={() => {
-            setShowForm(false)
-            setEditingJob(null)
-          }}
-        >
-          <JobForm
-            editingJob={editingJob}
-            onSubmit={handleSubmit}
-            onCancel={() => {}}
-          />
-        </Modal>
-      )}
-    </div>
-  )
+    </main>
+
+    {/* Add/Edit Job Modal */}
+    {(showForm || editingJob) && (
+      <Modal
+        onClose={() => {
+          setShowForm(false)
+          setEditingJob(null)
+        }}
+      >
+        <JobForm
+          editingJob={editingJob}
+          onSubmit={handleSubmit}
+          onCancel={() => {}}
+        />
+      </Modal>
+    )}
+  </div>
+)
 }
 
 export default Dashboard
+

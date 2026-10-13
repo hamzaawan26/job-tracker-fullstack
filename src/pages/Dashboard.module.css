@@ -10,6 +10,7 @@
 .content {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   padding: 32px;
   color: #f8fafc;
 }
@@ -99,6 +100,12 @@
 
   .dashboardGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
   }
 }
 
