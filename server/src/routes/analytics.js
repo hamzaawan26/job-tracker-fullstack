@@ -1,256 +1,86 @@
 import express from 'express'
+import mongoose from 'mongoose'
 import Job from '../models/Job.js'
 import { authMiddleware } from '../middleware/auth.js'
-import mongoose from 'mongoose'
+import { asyncHandler } from '../middleware/errors.js'
+
 const router = express.Router()
+router.use(authMiddleware)
+const userObjectId = (req) => new mongoose.Types.ObjectId(req.user.id)
 
-router.get('/summary', authMiddleware, async (req, res) => {
-  const userId = new mongoose.Types.ObjectId(req.user.id)
-
-  const total = await Job.countDocuments({ userId, isDeleted: false })
-  const applied = await Job.countDocuments({
-    userId,
-    status: 'applied',
-    isDeleted: false,
-  })
-  const interview = await Job.countDocuments({
-    userId,
-    status: 'interview',
-    isDeleted: false,
-  })
-  const offer = await Job.countDocuments({
-    userId,
-    status: 'offer',
-    isDeleted: false,
-  })
-
-  res.json({
-    total,
-    applied,
-    interview,
-    offer,
-  })
-})
-router.get('/platforms', authMiddleware, async (req, res) => {
-  const userId = new mongoose.Types.ObjectId(req.user.id)
-
-  const stats = await Job.aggregate([
-    {
-      $match: {
-        userId,
-        isDeleted: false,
-      },
-    },
-    {
-      $group: {
-        _id: '$platform',
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        platform: '$_id',
-        count: 1,
-      },
-    },
+router.get('/summary', asyncHandler(async (req, res) => {
+  const counts = await Job.aggregate([
+    { $match: { userId: userObjectId(req), isDeleted: false } },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
   ])
-
-  res.json(stats)
-})
-router.get('/timeline', authMiddleware, async (req, res) => {
-  const userId = new mongoose.Types.ObjectId(req.user.id)
-
-  const data = await Job.aggregate([
-    {
-      $match: {
-        userId,
-        isDeleted: false,
-      },
-    },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-        },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $sort: {
-        '_id.year': 1,
-        '_id.month': 1,
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        year: '$_id.year',
-        month: '$_id.month',
-        count: 1,
-      },
-    },
-  ])
-
-  res.json(data)
-})
-router.get('/overview', authMiddleware, async (req, res) => {
-  const stats = await Job.aggregate([
-    {
-      $match: {
-        userId: new mongoose.Types.ObjectId(req.user.id),
-        isDeleted: false,
-      },
-    },
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 },
-      },
-    },
-  ])
-
-  const response = {
-    totalJobs: 0,
-    applied: 0,
-    interview: 0,
-    offer: 0,
-  }
-
-  stats.forEach((s) => {
-    response[s._id] = s.count
-    response.totalJobs += s.count
-  })
-
+  const response = { total: 0, applied: 0, interview: 0, offer: 0 }
+  counts.forEach(({ _id, count }) => { response[_id] = count; response.total += count })
   res.json(response)
-})
-router.get('/status-breakdown', authMiddleware, async (req, res) => {
-  const breakdown = await Job.aggregate([
-    {
-      $match: {
-        userId: new mongoose.Types.ObjectId(req.user.id),
-        isDeleted: false,
-      },
-    },
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        status: '$_id',
-        count: 1,
-      },
-    },
+}))
+
+router.get('/platforms', asyncHandler(async (req, res) => {
+  const stats = await Job.aggregate([
+    { $match: { userId: userObjectId(req), isDeleted: false } },
+    { $group: { _id: '$platform', count: { $sum: 1 } } },
+    { $project: { _id: 0, platform: '$_id', count: 1 } },
   ])
+  res.json(stats)
+}))
 
-  res.json(breakdown)
-})
-router.get('/time-metrics', authMiddleware, async (req, res) => {
-  const userId = new mongoose.Types.ObjectId(req.user.id)
-
-  const interviewStats = await Job.aggregate([
-    {
-      $match: {
-        userId,
-        status: { $in: ['interview', 'offer'] },
-        isDeleted: false,
-      },
-    },
-    {
-      $project: {
-        days: {
-          $divide: [
-            { $subtract: ['$updatedAt', '$createdAt'] },
-            1000 * 60 * 60 * 24,
-          ],
-        },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        avg: { $avg: '$days' },
-      },
-    },
+router.get('/timeline', asyncHandler(async (req, res) => {
+  const data = await Job.aggregate([
+    { $match: { userId: userObjectId(req), isDeleted: false } },
+    { $group: { _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } }, count: { $sum: 1 } } },
+    { $sort: { '_id.year': 1, '_id.month': 1 } },
+    { $project: { _id: 0, year: '$_id.year', month: '$_id.month', count: 1 } },
   ])
-  router.get('/funnel', authMiddleware, async (req, res) => {
-    const userId = new mongoose.Types.ObjectId(req.user.id)
+  res.json(data)
+}))
 
-    const stats = await Job.aggregate([
-      {
-        $match: { userId, isDeleted: false },
-      },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
+router.get(['/overview', '/status-breakdown'], asyncHandler(async (req, res) => {
+  const stats = await Job.aggregate([
+    { $match: { userId: userObjectId(req), isDeleted: false } },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ])
+  if (req.path === '/status-breakdown') {
+    return res.json(stats.map(({ _id, count }) => ({ status: _id, count })))
+  }
+  const response = { totalJobs: 0, applied: 0, interview: 0, offer: 0 }
+  stats.forEach(({ _id, count }) => { response[_id] = count; response.totalJobs += count })
+  return res.json(response)
+}))
+
+router.get('/time-metrics', asyncHandler(async (req, res) => {
+  const userId = userObjectId(req)
+  const averageDays = async (status) => {
+    const result = await Job.aggregate([
+      { $match: { userId, status, isDeleted: false } },
+      { $project: { days: { $divide: [{ $subtract: ['$updatedAt', '$createdAt'] }, 86400000] } } },
+      { $group: { _id: null, avg: { $avg: '$days' } } },
     ])
-
-    const funnel = {
-      applied: 0,
-      interview: 0,
-      offer: 0,
-    }
-
-    stats.forEach((s) => {
-      funnel[s._id] = s.count
-    })
-
-    const conversion = {
-      appliedToInterview:
-        funnel.applied > 0
-          ? Math.round((funnel.interview / funnel.applied) * 100)
-          : 0,
-
-      interviewToOffer:
-        funnel.interview > 0
-          ? Math.round((funnel.offer / funnel.interview) * 100)
-          : 0,
-    }
-
-    res.json({
-      funnel,
-      conversion,
-    })
-  })
-
-  const offerStats = await Job.aggregate([
-    {
-      $match: {
-        userId,
-        status: 'offer',
-        isDeleted: false,
-      },
-    },
-    {
-      $project: {
-        days: {
-          $divide: [
-            { $subtract: ['$updatedAt', '$createdAt'] },
-            1000 * 60 * 60 * 24,
-          ],
-        },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        avg: { $avg: '$days' },
-      },
-    },
+    return Math.round(result[0]?.avg || 0)
+  }
+  const [interview, offer] = await Promise.all([
+    averageDays({ $in: ['interview', 'offer'] }),
+    averageDays('offer'),
   ])
+  res.json({ avgTimeToInterviewDays: interview, avgTimeToOfferDays: offer })
+}))
 
+router.get('/funnel', asyncHandler(async (req, res) => {
+  const stats = await Job.aggregate([
+    { $match: { userId: userObjectId(req), isDeleted: false } },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ])
+  const funnel = { applied: 0, interview: 0, offer: 0 }
+  stats.forEach(({ _id, count }) => { funnel[_id] = count })
   res.json({
-    avgTimeToInterviewDays: Math.round(interviewStats[0]?.avg || 0),
-    avgTimeToOfferDays: Math.round(offerStats[0]?.avg || 0),
+    funnel,
+    conversion: {
+      appliedToInterview: funnel.applied ? Math.round((funnel.interview / funnel.applied) * 100) : 0,
+      interviewToOffer: funnel.interview ? Math.round((funnel.offer / funnel.interview) * 100) : 0,
+    },
   })
-})
+}))
 
 export default router

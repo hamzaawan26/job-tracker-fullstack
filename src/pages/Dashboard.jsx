@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { useJobs } from '../hooks/useJobs'
 import { useCreateJob, useUpdateJob, useDeleteJob } from '../hooks/useJobs'
 import Sidebar from '../components/Sidebar'
@@ -8,6 +8,7 @@ import JobForm from '../components/JobForm'
 import JobCard from '../components/JobCard'
 import SkillsPanel from '../components/SkillsPanel'
 import Modal from '../components/Modal'
+import JobTrackerLoader from '../components/JobTrackerLoader'
 import styles from './Dashboard.module.css'
 
 function Dashboard() {
@@ -27,40 +28,58 @@ function Dashboard() {
   const createJob = useCreateJob()
   const updateJob = useUpdateJob()
   const deleteJob = useDeleteJob()
-  function handleSubmit(job) {
+  const closeForm = () => {
+    if (createJob.isPending || updateJob.isPending) return
+    setShowForm(false)
+    setEditingJob(null)
+  }
+
+  async function handleSubmit(job) {
     if (editingJob) {
-      updateJob.mutate({ id: editingJob.id, data: job })
+      await updateJob.mutateAsync({ id: editingJob.id, data: job })
     } else {
-      createJob.mutate(job)
+      await createJob.mutateAsync(job)
     }
     setShowForm(false)
     setEditingJob(null)
   }
   console.log('Jobs query raw data:', data)
 
-  return (
-    <div className={styles.layout}>
-      <Sidebar onAddJob={() => setShowForm(true)} />
+  
+return (
+  <div className={styles.layout}>
+    <Sidebar onAddJob={() => setShowForm(true)} />
 
-      <main className={styles.content}>
+    <main className={styles.content}>
+
+      {/* 1. Dashboard Section */}
+      <section id="dashboard">
         <DashboardHeader user={user} jobs={jobs} />
+      </section>
 
-        <div className={styles.controls}>
-          <input
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option>All</option>
-            <option>Applied</option>
-            <option>Interview</option>
-            <option>Offer</option>
-          </select>
-        </div>
+      {/* Search and Filter */}
+      <div className={styles.controls}>
+        <input
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        >
+          <option>All</option>
+          <option>Applied</option>
+          <option>Interview</option>
+          <option>Offer</option>
+        </select>
+      </div>
+
+      {/* 2. Applications Section */}
+      <section id="applications">
         {isLoading ? (
-          <div className={styles.loading}>Loading jobs...</div>
+          <JobTrackerLoader variant="inline" message="Loading your applications..." />
         ) : (
           <div className={styles.grid}>
             {jobs.map((job) => (
@@ -73,26 +92,33 @@ function Dashboard() {
             ))}
           </div>
         )}
+      </section>
 
+      {/* 3. Skills Section */}
+      <section id="skills">
         <SkillsPanel />
-      </main>
+      </section>
 
-      {(showForm || editingJob) && (
-        <Modal
-          onClose={() => {
-            setShowForm(false)
-            setEditingJob(null)
-          }}
-        >
-          <JobForm
-            editingJob={editingJob}
-            onSubmit={handleSubmit}
-            onCancel={() => {}}
-          />
-        </Modal>
-      )}
-    </div>
-  )
+    </main>
+
+    {/* Add/Edit Job Modal */}
+    {(showForm || editingJob) && (
+      <Modal
+        onClose={closeForm}
+        isBusy={createJob.isPending || updateJob.isPending}
+      >
+        <JobForm
+          key={editingJob?.id || 'new'}
+          editingJob={editingJob}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
+          isSaving={createJob.isPending || updateJob.isPending}
+        />
+      </Modal>
+    )}
+  </div>
+)
 }
 
 export default Dashboard
+

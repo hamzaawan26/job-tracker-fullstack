@@ -1,19 +1,40 @@
+
 import styles from './Sidebar.module.css'
 
 export default function Sidebar({ onAddJob }) {
   return (
     <aside className={styles.sidebar}>
-      <h2 className={styles.logo}>JobTracker</h2>
+      <div className={styles.brand}>
+        <div className={styles.brandIcon}>JT</div>
+        <span>JobTracker</span>
+      </div>
 
-      <button className={styles.addBtn} onClick={onAddJob}>
-        + Add Job
+      <div className={styles.menuLabel}>WORKSPACE</div>
+
+      <nav className={styles.menu} aria-label="Dashboard navigation">
+        <a className={styles.active} href="#dashboard">
+          <span>▦</span> Dashboard
+        </a>
+        <a className={styles.item} href="#applications">
+          <span>▤</span> Applications
+        </a>
+        <a className={styles.item} href="#skills">
+          <span>◈</span> Skills
+        </a>
+      </nav>
+
+      <button
+        type="button"
+        className={styles.addBtn}
+        onClick={onAddJob}
+      >
+        <span>＋</span> Add New Job
       </button>
 
-      <nav>
-        <p>Dashboard</p>
-        <p>Applications</p>
-        <p>Skills</p>
-      </nav>
+      <div className={styles.footer}>
+        JobTracker
+        <span>Manage your career journey</span>
+      </div>
     </aside>
   )
 }

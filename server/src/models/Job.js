@@ -7,8 +7,8 @@ const jobSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    title: { type: String, required: true },
-    company: { type: String, required: true },
+    title: { type: String, required: true, trim: true, maxlength: 150 },
+    company: { type: String, required: true, trim: true, maxlength: 150 },
 
     // unified status field for dropdown
     status: {
@@ -33,9 +33,9 @@ const jobSchema = new mongoose.Schema(
     datePosted: { type: Date },
     deadline: { type: Date },
     dateApplied: { type: Date },
-    platform: { type: String },
-    jobLink: { type: String },
-    notes: { type: String },
+    platform: { type: String, maxlength: 100 },
+    jobLink: { type: String, maxlength: 2048 },
+    notes: { type: String, maxlength: 5000 },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -44,13 +44,14 @@ const jobSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
-jobSchema.pre('save', function (next) {
+jobSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 })
+jobSchema.index({ userId: 1, isDeleted: 1, status: 1 })
+jobSchema.pre('save', function () {
   if (this.isNew) {
     this.statusHistory = [{ status: this.status }]
   }
-  next()
 })
-jobSchema.pre('save', function (next) {
+jobSchema.pre('save', function () {
   // Ensure status history exists
   if (!this.statusHistory || this.statusHistory.length === 0) {
     this.statusHistory = [
@@ -62,8 +63,6 @@ jobSchema.pre('save', function (next) {
   if (!this.dateApplied) {
     this.dateApplied = this.createdAt || new Date()
   }
-
-  next()
 })
 
 export default mongoose.model('Job', jobSchema)
