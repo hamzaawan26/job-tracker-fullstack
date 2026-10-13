@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { loginApi, registerApi, meApi } from '../api/authApi'
 import { AuthContext } from './auth-context'
+import JobTrackerLoader from '../components/JobTrackerLoader'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -43,7 +44,9 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
-  if (loading) return null
+  if (loading) {
+    return <JobTrackerLoader variant="fullScreen" message="Checking your session..." />
+  }
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout }}>

@@ -8,6 +8,7 @@ import JobForm from '../components/JobForm'
 import JobCard from '../components/JobCard'
 import SkillsPanel from '../components/SkillsPanel'
 import Modal from '../components/Modal'
+import JobTrackerLoader from '../components/JobTrackerLoader'
 import styles from './Dashboard.module.css'
 
 function Dashboard() {
@@ -78,9 +79,7 @@ return (
       {/* 2. Applications Section */}
       <section id="applications">
         {isLoading ? (
-          <div className={styles.loading}>
-            Loading jobs...
-          </div>
+          <JobTrackerLoader variant="inline" message="Loading your applications..." />
         ) : (
           <div className={styles.grid}>
             {jobs.map((job) => (
