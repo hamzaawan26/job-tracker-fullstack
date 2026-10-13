@@ -1,275 +1,127 @@
 import express from 'express'
+import { body, param, query } from 'express-validator'
 import Job from '../models/Job.js'
 import { authMiddleware } from '../middleware/auth.js'
-import { body, validationResult } from 'express-validator'
+import { asyncHandler } from '../middleware/errors.js'
+import { validateRequest } from '../middleware/validate.js'
 import { isValidStatusTransition } from '../utils/statusRules.js'
 
 const router = express.Router()
-const normalizePlatform = (platform) => {
-  if (!platform) return platform
-  return platform.trim().toLowerCase()
-}
+const editableFields = ['title', 'company', 'status', 'dateApplied', 'datePosted', 'deadline', 'platform', 'jobLink', 'notes']
+const optionalTextFields = new Set(['platform', 'jobLink', 'notes'])
+const optionalDateFields = new Set(['dateApplied', 'datePosted', 'deadline'])
 
-// Validation rules for job fields
-const jobValidationRules = [
-  body('title')
-    .notEmpty()
-    .withMessage('Title is required')
-    .isString()
-    .withMessage('Title must be a string'),
-
-  body('company')
-    .notEmpty()
-    .withMessage('Company is required')
-    .isString()
-    .withMessage('Company must be a string'),
-
-  body('status')
-    .isIn(['applied', 'interview', 'offer'])
-    .withMessage('Status must be applied, interview, or offer'),
-
-  body('jobLink').optional().isURL().withMessage('jobLink must be a valid URL'),
-  body('platform')
-    .optional()
-    .isString()
-    .withMessage('Platform must be a string'),
-  body('notes').optional().isString().withMessage('Notes must be a string'),
-  body('datePosted')
-    .optional()
-    .isISO8601()
-    .toDate()
-    .withMessage('datePosted must be a valid date'),
-  body('deadline')
-    .optional()
-    .isISO8601()
-    .toDate()
-    .withMessage('deadline must be a valid date'),
-  body('dateApplied')
-    .optional()
-    .isISO8601()
-    .toDate()
-    .withMessage('dateApplied must be a valid date'),
+const requiredJobRules = [
+  body('title').isString().trim().notEmpty().withMessage('Title is required').isLength({ max: 150 }).withMessage('Title must be 150 characters or fewer'),
+  body('company').isString().trim().notEmpty().withMessage('Company is required').isLength({ max: 150 }).withMessage('Company must be 150 characters or fewer'),
+  body('status').isIn(['applied', 'interview', 'offer']).withMessage('Invalid status'),
+  body('platform').optional({ values: 'falsy' }).isString().trim().isLength({ max: 100 }).withMessage('Platform must be 100 characters or fewer'),
+  body('jobLink').optional({ values: 'falsy' }).isURL({ protocols: ['http', 'https', 'ftp'], require_protocol: true }).withMessage('Job link must be a valid URL').isLength({ max: 2048 }).withMessage('Job link is too long'),
+  body('notes').optional({ values: 'falsy' }).isString().trim().isLength({ max: 5000 }).withMessage('Notes must be 5000 characters or fewer'),
+  ...['dateApplied', 'datePosted', 'deadline'].map((field) => body(field).optional({ values: 'falsy' }).isISO8601({ strict: true }).withMessage(`${field} must be a valid date`).toDate()),
 ]
 
-// Utility to handle validation errors
-const handleValidation = (req, res) => {
-  const errors = validationResult(req)
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() })
-  }
-}
-
-// ✅ Protected GET jobs (only for logged-in user)
-// router.get('/', authMiddleware, async (req, res) => {
-//   const jobs = await Job.find({ userId: req.user.id, isDeleted: false })
-//   res.json(jobs)
-// })
-const jobPatchValidationRules = [
-  body('title').optional().isString().withMessage('Title must be a string'),
-  body('company').optional().isString().withMessage('Company must be a string'),
-  body('status')
-    .optional()
-    .isIn(['applied', 'interview', 'offer'])
-    .withMessage('Invalid status'),
-  body('jobLink').optional().isURL().withMessage('jobLink must be a valid URL'),
-  body('platform').optional().isString(),
-  body('notes').optional().isString(),
-  body('datePosted').optional().isISO8601().toDate(),
-  body('deadline').optional().isISO8601().toDate(),
-  body('dateApplied').optional().isISO8601().toDate(),
+const patchJobRules = [
+  body('title').optional().isString().trim().notEmpty().withMessage('Title cannot be empty').isLength({ max: 150 }).withMessage('Title must be 150 characters or fewer'),
+  body('company').optional().isString().trim().notEmpty().withMessage('Company cannot be empty').isLength({ max: 150 }).withMessage('Company must be 150 characters or fewer'),
+  body('status').optional().isIn(['applied', 'interview', 'offer']).withMessage('Invalid status'),
+  ...requiredJobRules.slice(3),
 ]
 
-router.get('/', authMiddleware, async (req, res) => {
-  const page = parseInt(req.query.page) || 1
-  const limit = Math.min(parseInt(req.query.limit) || 10, 50)
+const idRule = param('id').isMongoId().withMessage('Invalid job ID')
 
-  const skip = (page - 1) * limit
-
-  const filter = {
-    userId: req.user.id,
-    isDeleted: false,
+function pickJobFields(source) {
+  const result = {}
+  for (const field of editableFields) {
+    if (!Object.hasOwn(source, field)) continue
+    const value = source[field]
+    if ((optionalTextFields.has(field) || optionalDateFields.has(field)) && value === '') {
+      result[field] = undefined
+    } else {
+      result[field] = field === 'platform' && value ? value.toLowerCase() : value
+    }
   }
-  const { status, platform, search } = req.query
+  return result
+}
 
-  if (status) filter.status = status
-  if (platform) filter.platform = platform
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
-  if (search) {
+async function updateOwnedJob(req, res) {
+  const updates = pickJobFields(req.body)
+  const job = await Job.findOne({ _id: req.params.id, userId: req.user.id, isDeleted: false })
+  if (!job) return res.status(404).json({ error: 'Job not found' })
+
+  const previousStatus = job.status
+  const nextStatus = updates.status
+  if (nextStatus && !isValidStatusTransition(previousStatus, nextStatus)) {
+    return res.status(400).json({ error: `Invalid status transition from ${previousStatus} to ${nextStatus}` })
+  }
+
+  Object.assign(job, updates)
+  if (nextStatus && nextStatus !== previousStatus) {
+    job.statusHistory.push({ status: nextStatus })
+  }
+  await job.save()
+  return res.json(job)
+}
+
+router.use(authMiddleware)
+
+router.get('/', [
+  query('page').optional().isInt({ min: 1, max: 100000 }).withMessage('Page must be a positive integer').toInt(),
+  query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50').toInt(),
+  query('status').optional({ values: 'falsy' }).isIn(['applied', 'interview', 'offer']).withMessage('Invalid status filter'),
+  query('platform').optional({ values: 'falsy' }).isString().trim().isLength({ max: 100 }).withMessage('Platform filter is too long'),
+  query('search').optional({ values: 'falsy' }).isString().trim().isLength({ max: 100 }).withMessage('Search must be 100 characters or fewer'),
+], validateRequest, asyncHandler(async (req, res) => {
+  const page = req.query.page || 1
+  const limit = req.query.limit || 10
+  const filter = { userId: req.user.id, isDeleted: false }
+
+  if (req.query.status) filter.status = req.query.status
+  if (req.query.platform) filter.platform = req.query.platform.toLowerCase()
+  if (req.query.search) {
+    const safeSearch = escapeRegex(req.query.search)
     filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { company: { $regex: search, $options: 'i' } },
+      { title: { $regex: safeSearch, $options: 'i' } },
+      { company: { $regex: safeSearch, $options: 'i' } },
     ]
   }
 
-  const jobs = await Job.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
+  const [jobs, total] = await Promise.all([
+    Job.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    Job.countDocuments(filter),
+  ])
+  res.json({ data: jobs, pagination: { page, limit, total, pages: Math.ceil(total / limit) } })
+}))
 
-  const total = await Job.countDocuments(filter)
-
-  res.json({
-    data: jobs,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
-  })
-})
-// ✅ Protected GET single job by ID
-router.get('/:id', authMiddleware, async (req, res) => {
-  try {
-    const job = await Job.findOne({
-      _id: req.params.id,
-      userId: req.user.id,
-      isDeleted: false,
-    })
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' })
-    }
-
-    res.json(job)
-  } catch {
-    res.status(400).json({ error: 'Invalid job ID' })
-  }
-})
-
-// ✅ Protected POST create job
-router.post('/', authMiddleware, jobValidationRules, async (req, res) => {
-  const invalid = handleValidation(req, res)
-  if (invalid) return
-
-  try {
-    if (req.body.platform) {
-      req.body.platform = normalizePlatform(req.body.platform)
-    }
-    const exists = await Job.findOne({
-      userId: req.user.id,
-      title: req.body.title,
-      company: req.body.company,
-      isDeleted: false,
-    })
-
-    if (exists) {
-      return res.status(409).json({
-        error: 'Duplicate job entry detected',
-      })
-    }
-
-    const job = await Job.create({ ...req.body, userId: req.user.id })
-    res.status(201).json(job)
-  } catch (err) {
-    res.status(400).json({ error: err.message })
-  }
-})
-
-// ✅ Protected PUT update job
-// router.put('/:id', authMiddleware, jobValidationRules, async (req, res) => {
-//   const invalid = handleValidation(req, res)
-//   if (invalid) return
-
-//   try {
-//     const job = await Job.findOneAndUpdate(
-//       { _id: req.params.id, userId: req.user.id, isDeleted: false }, //
-
-//       req.body,
-//       { new: true, runValidators: true }
-//     )
-//     if (!job) return res.status(404).json({ error: 'Job not found' })
-//     res.json(job)
-//   } catch (err) {
-//     res.status(400).json({ error: err.message })
-//   }
-// })
-router.put('/:id', authMiddleware, jobValidationRules, async (req, res) => {
-  const invalid = handleValidation(req, res)
-  if (invalid) return
-
-  try {
-    if (req.body.platform) {
-      req.body.platform = normalizePlatform(req.body.platform)
-    }
-
-    // Find job belonging to the user
-    const job = await Job.findOne({
-      _id: req.params.id,
-      userId: req.user.id,
-      isDeleted: false,
-    })
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' })
-    }
-
-    // Validate status transition
-    if (
-      req.body.status &&
-      !isValidStatusTransition(job.status, req.body.status)
-    ) {
-      return res.status(400).json({
-        error: `Invalid status transition from ${job.status} to ${req.body.status}`,
-      })
-    }
-
-    // Apply updates
-    Object.assign(job, req.body)
-
-    // Track status history
-    if (req.body.status && req.body.status !== job.status) {
-      job.statusHistory.push({ status: req.body.status })
-    }
-
-    await job.save()
-    res.json(job)
-  } catch (err) {
-    res.status(400).json({ error: err.message })
-  }
-})
-// ✅ Protected PATCH job (partial update)
-router.patch(
-  '/:id',
-  authMiddleware,
-  jobPatchValidationRules,
-  async (req, res) => {
-    const invalid = handleValidation(req, res)
-    if (invalid) return
-
-    try {
-      const job = await Job.findOneAndUpdate(
-        {
-          _id: req.params.id,
-          userId: req.user.id,
-          isDeleted: false,
-        },
-        { $set: req.body },
-        { new: true, runValidators: true }
-      )
-
-      if (!job) {
-        return res.status(404).json({ error: 'Job not found' })
-      }
-
-      res.json(job)
-    } catch (err) {
-      res.status(400).json({ error: err.message })
-    }
-  }
-)
-
-// ✅ Protected DELETE job
-router.delete('/:id', authMiddleware, async (req, res) => {
-  const job = await Job.findOneAndUpdate(
-    { _id: req.params.id, userId: req.user.id },
-    { isDeleted: true },
-    { new: true }
-  )
-
+router.get('/:id', idRule, validateRequest, asyncHandler(async (req, res) => {
+  const job = await Job.findOne({ _id: req.params.id, userId: req.user.id, isDeleted: false })
   if (!job) return res.status(404).json({ error: 'Job not found' })
+  return res.json(job)
+}))
 
-  res.json({ message: 'Job soft-deleted' })
-})
+router.post('/', requiredJobRules, validateRequest, asyncHandler(async (req, res) => {
+  const input = pickJobFields(req.body)
+  const exists = await Job.exists({ userId: req.user.id, title: input.title, company: input.company, isDeleted: false })
+  if (exists) return res.status(409).json({ error: 'Duplicate job entry detected' })
+  const job = await Job.create({ ...input, userId: req.user.id })
+  return res.status(201).json(job)
+}))
+
+router.put('/:id', idRule, requiredJobRules, validateRequest, asyncHandler(updateOwnedJob))
+router.patch('/:id', idRule, patchJobRules, validateRequest, asyncHandler(updateOwnedJob))
+
+router.delete('/:id', idRule, validateRequest, asyncHandler(async (req, res) => {
+  const job = await Job.findOneAndUpdate(
+    { _id: req.params.id, userId: req.user.id, isDeleted: false },
+    { isDeleted: true },
+    { returnDocument: 'after' }
+  )
+  if (!job) return res.status(404).json({ error: 'Job not found' })
+  return res.json({ message: 'Job soft-deleted' })
+}))
 
 export default router

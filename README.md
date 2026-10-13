@@ -1,4 +1,32 @@
-# React + Vite
+# JobTracker
+
+JobTracker is a React and Express application for managing job applications.
+
+## Local configuration
+
+Copy `.env.example` to `.env` for the Vite client, and copy
+`server/.env.example` to `server/.env` for the API. Replace placeholder values;
+never commit either real `.env` file.
+
+The backend requires `MONGO_URI` and `JWT_SECRET`. Production additionally
+requires an explicit comma-separated `CORS_ORIGINS` allowlist and a JWT secret
+of at least 32 characters. The frontend uses `VITE_API_URL` for the API base
+URL and falls back to `http://localhost:4000/api` during local development.
+
+Run the API with `npm run dev` from `server/`, and the client with `npm run dev`
+from the repository root.
+
+Authentication rate limits use an in-memory store. This is appropriate for one
+small API instance, but a shared external store is required before scaling to
+multiple instances so limits remain consistent across processes.
+
+## Validation
+
+- `npm run lint` from the repository root
+- `npm run build` from the repository root
+- `npm test` from `server/`
+
+## Vite notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

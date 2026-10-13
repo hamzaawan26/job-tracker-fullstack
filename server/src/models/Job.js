@@ -7,8 +7,8 @@ const jobSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    title: { type: String, required: true },
-    company: { type: String, required: true },
+    title: { type: String, required: true, trim: true, maxlength: 150 },
+    company: { type: String, required: true, trim: true, maxlength: 150 },
 
     // unified status field for dropdown
     status: {
@@ -33,9 +33,9 @@ const jobSchema = new mongoose.Schema(
     datePosted: { type: Date },
     deadline: { type: Date },
     dateApplied: { type: Date },
-    platform: { type: String },
-    jobLink: { type: String },
-    notes: { type: String },
+    platform: { type: String, maxlength: 100 },
+    jobLink: { type: String, maxlength: 2048 },
+    notes: { type: String, maxlength: 5000 },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -44,6 +44,8 @@ const jobSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+jobSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 })
+jobSchema.index({ userId: 1, isDeleted: 1, status: 1 })
 jobSchema.pre('save', function () {
   if (this.isNew) {
     this.statusHistory = [{ status: this.status }]
