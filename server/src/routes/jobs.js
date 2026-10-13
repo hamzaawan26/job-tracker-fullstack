@@ -132,7 +132,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     }
 
     res.json(job)
-  } catch (err) {
+  } catch {
     res.status(400).json({ error: 'Invalid job ID' })
   }
 })

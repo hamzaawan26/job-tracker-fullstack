@@ -26,11 +26,15 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 4000
 
-mongoose
+if (process.env.NODE_ENV !== 'test') {
+  mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected')
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`))
   })
-  .catch((err) => console.error('❌ MongoDB error:', err))
+    .catch((err) => console.error('❌ MongoDB error:', err))
+}
 app.disable('etag')
+
+export default app

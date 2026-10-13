@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import '../styles/auth.css'
 
 export default function Login() {
@@ -11,7 +11,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) navigate('/dashboard')
-  }, [user])
+  }, [user, navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()

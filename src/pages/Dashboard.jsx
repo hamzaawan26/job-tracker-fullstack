@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { useJobs } from '../hooks/useJobs'
 import { useCreateJob, useUpdateJob, useDeleteJob } from '../hooks/useJobs'
 import Sidebar from '../components/Sidebar'

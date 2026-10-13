@@ -44,13 +44,12 @@ const jobSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
-jobSchema.pre('save', function (next) {
+jobSchema.pre('save', function () {
   if (this.isNew) {
     this.statusHistory = [{ status: this.status }]
   }
-  next()
 })
-jobSchema.pre('save', function (next) {
+jobSchema.pre('save', function () {
   // Ensure status history exists
   if (!this.statusHistory || this.statusHistory.length === 0) {
     this.statusHistory = [
@@ -62,8 +61,6 @@ jobSchema.pre('save', function (next) {
   if (!this.dateApplied) {
     this.dateApplied = this.createdAt || new Date()
   }
-
-  next()
 })
 
 export default mongoose.model('Job', jobSchema)

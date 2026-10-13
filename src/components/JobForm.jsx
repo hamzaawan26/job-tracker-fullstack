@@ -1,23 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import styles from './JobForm.module.css'
 
-function JobForm({ onSubmit, editingJob, onCancel }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    company: '',
-    status: 'Applied',
-    dateApplied: '',
-    jobPostedDate: '',
-    platform: '',
-    jobLink: '',
-    notes: '',
-  })
+const emptyJob = {
+  title: '',
+  company: '',
+  status: 'Applied',
+  dateApplied: '',
+  jobPostedDate: '',
+  platform: '',
+  jobLink: '',
+  notes: '',
+}
 
-  useEffect(() => {
-    if (editingJob) {
-      setFormData(editingJob)
-    }
-  }, [editingJob])
+function JobForm({ onSubmit, editingJob, onCancel }) {
+  const [formData, setFormData] = useState(() => editingJob || emptyJob)
 
   function handleChange(e) {
     setFormData({ ...formData, [e.target.name]: e.target.value })
