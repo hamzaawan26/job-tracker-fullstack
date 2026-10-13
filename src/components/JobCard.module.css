@@ -1,62 +1,77 @@
+
 .card {
   background: #ffffff;
-  padding: 1.25rem;
-  border-radius: 10px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.2s ease;
+  color: #0f172a;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-width: 0;
 }
 
 .card:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .header h3 {
-  font-size: 1.1rem;
   margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
-.status {
-  padding: 0.3rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+.header span {
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  white-space: nowrap;
+  background: #f1f5f9;
+  color: #334155;
 }
 
-.applied {
-  background: #e0edff;
+.header .applied {
+  background: #dbeafe;
   color: #1d4ed8;
 }
 
-.interview {
-  background: #fff4cc;
+.header .interview {
+  background: #fef3c7;
   color: #92400e;
 }
 
-.offer {
+.header .offer {
   background: #dcfce7;
   color: #166534;
 }
 
 .card p {
-  margin: 0.4rem 0;
-  color: #444;
-  font-size: 0.9rem;
+  margin: 8px 0;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .card a {
   display: inline-block;
-  margin-top: 0.5rem;
+  margin-top: 10px;
   color: #2563eb;
   text-decoration: none;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .card a:hover {
@@ -65,58 +80,39 @@
 
 .actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .actions button {
   flex: 1;
-  padding: 0.5rem;
+  padding: 10px;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  border-radius: 8px;
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
 .actions button:first-child {
-  background-color: #facc15;
-  color: #92400e;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.actions button:first-child:hover {
+  background: #dbeafe;
 }
 
 .actions button:last-child {
-  background-color: #dc2626;
-  color: white;
+  background: #fef2f2;
+  color: #dc2626;
 }
 
-.actions button:hover:first-child {
-  background-color: #fbbf24;
+.actions button:last-child:hover {
+  background: #fee2e2;
 }
 
-.actions button:hover:last-child {
-  background-color: #991b1b;
-}
-.card {
-  background: #111827;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: inset 0 0 0 1px #1f2937;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.actions button {
-  background: #1f2937;
-  border: none;
-  color: #e5e7eb;
-  padding: 6px 10px;
-  border-radius: 8px;
+.actions button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
 }
