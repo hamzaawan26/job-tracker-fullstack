@@ -22,7 +22,7 @@ export function useCreateJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: createJob,
-    onSuccess: () => qc.invalidateQueries(['jobs']),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
   })
 }
 
@@ -30,7 +30,7 @@ export function useUpdateJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }) => updateJob(id, data),
-    onSuccess: () => qc.invalidateQueries(['jobs']),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
   })
 }
 
@@ -38,6 +38,6 @@ export function useDeleteJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: deleteJob,
-    onSuccess: () => qc.invalidateQueries(['jobs']),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
   })
 }

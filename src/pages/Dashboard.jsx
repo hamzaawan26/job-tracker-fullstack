@@ -27,11 +27,17 @@ function Dashboard() {
   const createJob = useCreateJob()
   const updateJob = useUpdateJob()
   const deleteJob = useDeleteJob()
-  function handleSubmit(job) {
+  const closeForm = () => {
+    if (createJob.isPending || updateJob.isPending) return
+    setShowForm(false)
+    setEditingJob(null)
+  }
+
+  async function handleSubmit(job) {
     if (editingJob) {
-      updateJob.mutate({ id: editingJob.id, data: job })
+      await updateJob.mutateAsync({ id: editingJob.id, data: job })
     } else {
-      createJob.mutate(job)
+      await createJob.mutateAsync(job)
     }
     setShowForm(false)
     setEditingJob(null)
@@ -99,15 +105,15 @@ return (
     {/* Add/Edit Job Modal */}
     {(showForm || editingJob) && (
       <Modal
-        onClose={() => {
-          setShowForm(false)
-          setEditingJob(null)
-        }}
+        onClose={closeForm}
+        isBusy={createJob.isPending || updateJob.isPending}
       >
         <JobForm
+          key={editingJob?.id || 'new'}
           editingJob={editingJob}
           onSubmit={handleSubmit}
-          onCancel={() => {}}
+          onCancel={closeForm}
+          isSaving={createJob.isPending || updateJob.isPending}
         />
       </Modal>
     )}
