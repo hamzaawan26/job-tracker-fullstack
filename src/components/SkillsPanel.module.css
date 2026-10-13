@@ -1,0 +1,15 @@
+.panel {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 2rem;
+}
+
+.skill {
+  margin-bottom: 0.5rem;
+}
+
+.tip {
+  font-size: 0.9rem;
+  color: #475569;
+}

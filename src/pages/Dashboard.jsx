@@ -1,0 +1,98 @@
+import { useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { useJobs } from '../hooks/useJobs'
+import { useCreateJob, useUpdateJob, useDeleteJob } from '../hooks/useJobs'
+import Sidebar from '../components/Sidebar'
+import DashboardHeader from '../components/DashboardHeader'
+import JobForm from '../components/JobForm'
+import JobCard from '../components/JobCard'
+import SkillsPanel from '../components/SkillsPanel'
+import Modal from '../components/Modal'
+import styles from './Dashboard.module.css'
+
+function Dashboard() {
+  const [editingJob, setEditingJob] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [filter, setFilter] = useState('All')
+  const [search, setSearch] = useState('')
+  const { user } = useAuth()
+
+  // React Query - fetch jobs from backend
+  const { data, isLoading } = useJobs({
+    search,
+    status: filter === 'All' ? undefined : filter.toLowerCase(),
+  })
+
+  const jobs = data?.jobs || []
+  const createJob = useCreateJob()
+  const updateJob = useUpdateJob()
+  const deleteJob = useDeleteJob()
+  function handleSubmit(job) {
+    if (editingJob) {
+      updateJob.mutate({ id: editingJob.id, data: job })
+    } else {
+      createJob.mutate(job)
+    }
+    setShowForm(false)
+    setEditingJob(null)
+  }
+  console.log('Jobs query raw data:', data)
+
+  return (
+    <div className={styles.layout}>
+      <Sidebar onAddJob={() => setShowForm(true)} />
+
+      <main className={styles.content}>
+        <DashboardHeader user={user} jobs={jobs} />
+
+        <div className={styles.controls}>
+          <input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option>All</option>
+            <option>Applied</option>
+            <option>Interview</option>
+            <option>Offer</option>
+          </select>
+        </div>
+
+        {isLoading ? (
+          <div className={styles.loading}>Loading jobs...</div>
+        ) : (
+          <div className={styles.grid}>
+            {jobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onEdit={setEditingJob}
+                onDelete={(id) => deleteJob.mutate(id)}
+              />
+            ))}
+          </div>
+        )}
+
+        <SkillsPanel />
+      </main>
+
+      {(showForm || editingJob) && (
+        <Modal
+          onClose={() => {
+            setShowForm(false)
+            setEditingJob(null)
+          }}
+        >
+          <JobForm
+            editingJob={editingJob}
+            onSubmit={handleSubmit}
+            onCancel={() => {}}
+          />
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+export default Dashboard
