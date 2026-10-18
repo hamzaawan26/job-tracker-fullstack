@@ -9,7 +9,7 @@
 [![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![Jest](https://img.shields.io/badge/Testing-Jest-C21325?style=flat-square&logo=jest&logoColor=white)](https://jestjs.io/)
 
-JobTracker helps users organize job applications, track progress from application to offer, and keep dates, platforms, links, and notes in one focused workspace. It was built as a full-stack software engineering project with a responsive React interface, a secured Express API, MongoDB persistence, and automated backend security tests.
+JobTracker helps users organize job applications, track progress from application to offer, and keep dates, platforms, links, and notes in one focused workspace. It was built as a full-stack development project with a responsive React interface, a secured Express API, MongoDB persistence, and automated backend security tests.
 
 [Features](#features) · [Screenshots](#application-screenshots) · [Tech Stack](#tech-stack) · [Architecture](#architecture) · [Getting Started](#getting-started) · [API](#api-reference) · [Testing](#testing)
 
