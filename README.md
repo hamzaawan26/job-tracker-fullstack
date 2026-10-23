@@ -22,7 +22,6 @@ JobTracker helps users organize job applications, track progress from applicatio
 - Session restoration through the authenticated `/api/auth/me` endpoint
 - Password hashing with bcrypt
 - Responsive login and registration forms with inline validation
-- Branded full-screen, inline, and button loading states
 - Database-backed authorization so current user roles are applied immediately
 
 ### Job management
@@ -32,14 +31,12 @@ JobTracker helps users organize job applications, track progress from applicatio
 - Track `applied`, `interview`, and `offer` stages with transition history
 - Search titles and companies and filter by application status
 - Store application dates, posting dates, platform names, job links, and notes
-- User-scoped access controls that prevent cross-account reads and mutations
 
 ### Dashboard
 
 - At-a-glance totals for all applications and each tracked status
 - Responsive application cards with edit and delete controls
 - Search and status-filter controls
-- Skills progress panel
 - Desktop, tablet, and mobile layouts
 - Accessible Add/Edit Job modal with validation, keyboard controls, loading states, and API error feedback
 
