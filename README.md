@@ -113,7 +113,7 @@ JobTracker helps users organize job applications, track progress from applicatio
 | Authentication | JSON Web Tokens, bcryptjs |
 | Data fetching | TanStack React Query, Axios |
 | Validation | express-validator, custom client-side validation |
-| Testing | Jest, Supertest, MongoDB Memory Server |
+
 | Security | Helmet, Express Rate Limit, CORS, field allowlisting |
 | Tooling | ESLint, Nodemon, npm |
 
@@ -128,7 +128,7 @@ flowchart LR
     API -->|Verify token and load current user| DB
 ```
 
-The frontend uses React Router for public and protected navigation. Authentication tokens are stored using the existing client authentication context and attached to API requests by an Axios interceptor. The Express authentication middleware verifies each JWT and loads the current user from MongoDB before allowing protected operations. React Query manages job fetching, mutations, cache invalidation, and dashboard refreshes.
+The frontend uses React Router for public and protected navigation. Authentication tokens are stored using the existing client authentication context and attached to API requests by an Axios interceptor. The Express authentication middleware verifies each JWT and loads the current user from MongoDB before allowing protected operations.
 
 ### Project structure
 
